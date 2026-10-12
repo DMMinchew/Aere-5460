@@ -1,0 +1,149 @@
+\documentclass[11pt]{article}
+\usepackage[letterpaper,top=0.55in,bottom=0.55in,left=0.65in,right=0.65in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{titling}
+\usepackage{booktabs,graphicx,float,xcolor,listings}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\setlength{\abovedisplayskip}{5pt}
+\setlength{\belowdisplayskip}{5pt}
+\setlength{\abovedisplayshortskip}{3pt}
+\setlength{\belowdisplayshortskip}{3pt}
+
+\setlength{\droptitle}{-4em}
+\pretitle{\begin{center}\Large}
+\posttitle{\par\end{center}\vspace{-0.5em}}
+\preauthor{\begin{center}\normalsize}
+\postauthor{\par\end{center}\vspace{-0.7em}}
+\predate{\begin{center}\normalsize}
+\postdate{\par\end{center}\vspace{-1.5em}}
+\definecolor{codebg}{RGB}{246,248,250}
+\lstset{language=Python,basicstyle=\ttfamily\scriptsize,backgroundcolor=\color{codebg},frame=single,
+breaklines=true,showstringspaces=false,columns=fullflexible,keywordstyle=\color{blue!65!black},commentstyle=\color{green!45!black}}
+\title{AerE 5460 Homework 2}
+\author{David Minchew}
+\date{September 22, 2026}
+\begin{document}
+\maketitle
+
+\section*{1. Heat Fin}
+The governing equation is
+\begin{equation}\frac{d^2T}{dx^2}=MT,\qquad 0\le x\le1.\end{equation}
+All numerical solutions below use $N=1001$ grid points and centered second-order finite differences. No full matrix is constructed.
+
+\subsection*{1.1 Finite-Difference Equations and Tridiagonal Storage}
+At an interior node $x_i=i\Delta x$,
+\[
+\frac{T_{i-1}-2T_i+T_{i+1}}{\Delta x^2}=M_iT_i,
+\]
+so
+\[
+T_{i-1}-(2+M_i\Delta x^2)T_i+T_{i+1}=0.
+\]
+Thus the three diagonals requested in the problem are
+\[
+\boxed{d_i=-(2+M_i\Delta x^2),\qquad a_i=1,\qquad b_i=1.}
+\]
+Here $d,a,b$ denote the main, lower, and upper diagonals. The known value $T_0=1$ is moved to the right-hand side of the first interior equation. For $T(1)=0$, the last prescribed value is handled the same way. For $T'(1)=0$, a centered ghost-point condition gives $T_N=T_{N-2}$; substitution into the differential equation at the tip gives
+\[
+2T_{N-2}-(2+M_{N-1}\Delta x^2)T_{N-1}=\Delta x^2f_{N-1}.
+\]
+This retains tridiagonal form. The Thomas algorithm performs forward elimination and backward substitution in $O(N)$ work and $O(N)$ storage.
+
+For constant $M$, the discrete homogeneous recurrence has $T_i=C_+r_+^i+C_-r_-^i$, where
+\[
+r_{\pm}=\frac{2+M\Delta x^2\pm\sqrt{(2+M\Delta x^2)^2-4}}{2}.
+\]
+
+\subsection*{1.2 Closed-Form Continuous Solutions}
+Let $k=\sqrt M$. The general solution is $T=A\cosh(kx)+B\sinh(kx)$.
+For $T(0)=1,T(1)=0$,
+\begin{equation}\boxed{T(x)=\frac{\sinh(k(1-x))}{\sinh k}}.\end{equation}
+For $T(0)=1,T'(1)=0$,
+\begin{equation}\boxed{T(x)=\frac{\cosh(k(1-x))}{\cosh k}}.\end{equation}
+
+\subsection*{1.3 Part (b): Prescribed Temperatures}
+The cold-reservoir heat flux is $q(1)=-T'(1)$ and is evaluated numerically with the second-order backward difference
+\[
+-T'(1)\approx-\frac{3T_{N-1}-4T_{N-2}+T_{N-3}}{2\Delta x}.
+\]
+\begin{table}[H]\centering
+\begin{tabular}{rrrr}\toprule
+$M$&$T(1)$&$-T'(1)$&maximum $|T_{FD}-T_{exact}|$\\\midrule
+1&0&0.85091786&$4.42\times10^{-9}$\\
+5&0&0.48349485&$6.07\times10^{-8}$\\
+9&0&0.29946404&$1.28\times10^{-7}$\\\bottomrule
+\end{tabular}\end{table}
+\begin{figure}[H]\centering\includegraphics[width=.74\linewidth]{report_assets/part_b.pdf}\caption{Part (b): temperature with fixed end temperatures.}\end{figure}
+
+\subsection*{1.4 Part (c): Insulated Tip}
+\begin{table}[H]\centering
+\begin{tabular}{rrrr}\toprule
+$M$&numerical $T(1)$&exact $T(1)=1/\cosh\sqrt M$&maximum error\\\midrule
+1&0.64805429&0.64805427&$2.05\times10^{-8}$\\
+5&0.21134181&0.21134172&$9.74\times10^{-8}$\\
+9&0.09932804&0.09932793&$1.49\times10^{-7}$\\\bottomrule
+\end{tabular}\end{table}
+\begin{figure}[H]\centering\includegraphics[width=.74\linewidth]{report_assets/part_c.pdf}\caption{Part (c): temperature with an insulated tip.}\end{figure}
+
+\subsection*{1.5 Part (d): Boundary-Condition Comparison at $M=9$}
+\begin{figure}[H]\centering\includegraphics[width=.74\linewidth]{report_assets/part_d.pdf}\caption{The fixed-temperature tip forces $T(1)=0$; insulation forces zero slope and leaves $T(1)>0$.}\end{figure}
+
+\subsection*{1.6 Part (e): Variable Thermal Mass}
+Now $M(x)=M(1+20x^2)$, so only the main diagonal changes:
+\[
+d_i=-\left[2+M(1+20x_i^2)\Delta x^2\right].
+\]
+The boundary conditions are $T(0)=1$ and $T'(1)=0$.
+\begin{table}[H]\centering\begin{tabular}{rrr}\toprule
+$M$&$T(1)$&max change from $N=501$ to $N=1001$\\\midrule
+1&0.09443781&$2.87\times10^{-7}$\\5&0.00355932&$1.75\times10^{-7}$\\9&0.00049571&$1.66\times10^{-7}$\\\bottomrule
+\end{tabular}\end{table}
+\begin{figure}[H]\centering\includegraphics[width=.74\linewidth]{report_assets/part_e.pdf}\caption{Part (e): variable thermal mass.}\end{figure}
+
+\subsection*{1.7 Part (f): Nonhomogeneous Equation}
+For
+\[
+T''=MT-100x^2(1-x)^2,
+\]
+the diagonals are unchanged and the right-hand side becomes
+\[
+q_i=-100\Delta x^2x_i^2(1-x_i)^2,
+\]
+with the boundary contribution $-T_0=-1$ added to its first entry.
+\begin{table}[H]\centering\begin{tabular}{rrr}\toprule
+$M$&$T(1)$&max change from $N=501$ to $N=1001$\\\midrule
+1&1.79395546&$1.17\times10^{-6}$\\5&0.68146893&$9.27\times10^{-7}$\\9&0.37453441&$9.14\times10^{-7}$\\\bottomrule
+\end{tabular}\end{table}
+\begin{figure}[H]\centering\includegraphics[width=.74\linewidth]{report_assets/part_f.pdf}\caption{Part (f): nonhomogeneous solutions.}\end{figure}
+
+\section*{2. Equation Types}
+For a second-order PDE $Au_{xx}+2Bu_{xy}+Cu_{yy}+\cdots=0$, the discriminant is $B^2-AC$: positive is hyperbolic, zero parabolic, and negative elliptic.
+
+\subsection*{(i) $\phi_{xy}+\phi=25$}
+Here $A=C=0$ and $2B=1$, so $B^2-AC=1/4>0$. Therefore
+\[\boxed{\text{the equation is linear, second-order, and hyperbolic.}}\]
+
+\subsection*{(ii) Continuity with $u=\phi_x$, $v=\phi_y$}
+Substitution into $u_x+v_y=0$ gives
+\[
+\phi_{xx}+\phi_{yy}=0,
+\]
+the Laplace equation. Here $A=C=1,B=0$, so $B^2-AC=-1<0$ and
+\[\boxed{\text{the potential equation is linear, second-order, and elliptic.}}\]
+
+\subsection*{(iii) Boundary-layer momentum equation}
+The equation
+\[
+u\,u_x+v\,u_y=\frac1{Re}u_{yy}
+\]
+contains a second derivative only in $y$. Hence $A=B=0$ and $C\ne0$, giving zero discriminant. Thus
+\[\boxed{\text{the equation is nonlinear, second-order, quasilinear, and parabolic.}}\]
+It behaves as a marching equation in the streamwise coordinate $x$ when the velocity $u$ remains positive.
+
+\section*{Appendix: Complete Python Program}
+The program below stores only the three diagonals, applies the Thomas algorithm, prints the numerical values and grid-refinement measures, and generates all five figures.
+\lstinputlisting{heat_fin_solution.py}
+\end{document}
